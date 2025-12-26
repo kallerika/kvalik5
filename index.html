@@ -1,0 +1,1181 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PyCharm Window Mock (Darcula)</title>
+<style>
+  :root{
+    --bg:#2b2b2b; --top:#3c3f41; --panel:#2f3133; --line:#3f4245;
+    --text:#a9b7c6; --muted:#7a7f85; --title:#d7dae0;
+    --gutter:#2a2a2a; --editor:#2b2b2b;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+
+  .window{height:100%;display:grid;grid-template-rows:44px 34px 1fr}
+  .topbar{display:flex;align-items:center;gap:12px;padding:0 12px;
+    background:linear-gradient(#3c3f41,#343638);border-bottom:1px solid var(--line)}
+  .pc-logo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#00c2ff,#00ff87);
+    display:grid;place-items:center;color:#121416;font-weight:900;font-size:12px}
+  .hamb{width:18px;height:18px;border-radius:4px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+  .chip{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:#2f3133;
+    border:1px solid rgba(255,255,255,.08);color:var(--title);font-weight:700}
+  .chip .avatar{width:18px;height:18px;border-radius:6px;background:#4b88ff33;border:1px solid #4b88ff55;
+    display:grid;place-items:center;font-size:12px;font-weight:900;color:#cfe3ff}
+  .crumbs{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;white-space:nowrap}
+  .spacer{flex:1}
+  .top-right{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px}
+  .drop{padding:6px 10px;border-radius:8px;border:1px solid transparent}
+  .drop:hover{border-color:rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+  .icon-btn{width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+  .run{width:26px;height:26px;border-radius:8px;border:1px solid rgba(74,255,140,.18);background:rgba(74,255,140,.06);position:relative}
+  .run:before{content:"";position:absolute;left:10px;top:7px;border-left:10px solid #3ddc84;border-top:6px solid transparent;border-bottom:6px solid transparent}
+
+  /* кнопка Copy */
+  .copy-btn{
+    height:28px; padding:0 10px; border-radius:8px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.04);
+    color:var(--title); font-weight:700; font-size:12px;
+    cursor:pointer;
+  }
+  .copy-btn:hover{background:rgba(255,255,255,.07)}
+  .copy-btn:active{transform:translateY(1px)}
+  .toast{
+    position:fixed; right:16px; top:12px;
+    background:#1f2123; color:var(--title);
+    border:1px solid rgba(255,255,255,.10);
+    padding:8px 10px; border-radius:10px;
+    font-size:12px; opacity:0; transform:translateY(-6px);
+    transition:opacity .15s, transform .15s;
+    pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:translateY(0)}
+
+  .tabs{display:flex;align-items:flex-end;gap:6px;padding:0 8px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .tab{height:30px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#2b2d2f;border:1px solid var(--line);
+    border-bottom:none;border-top-left-radius:10px;border-top-right-radius:10px;color:var(--muted);font-size:13px}
+  .tab.active{background:#333638;color:var(--title);border-color:rgba(255,255,255,.10);box-shadow: inset 0 2px 0 0 #4aa3ff}
+  .py-dot{width:14px;height:14px;border-radius:4px;background:linear-gradient(135deg,#ffd54a,#ff9f1a)}
+
+  .content{display:grid;grid-template-columns:54px 310px 1fr 44px;min-height:0}
+  .left-tool{background:#2a2c2e;border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;padding:8px 0}
+  .tool-col{display:flex;flex-direction:column;gap:10px;align-items:center}
+  .tool-ico{width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);opacity:.75}
+  .tool-ico.active{opacity:1;outline:2px solid rgba(74,163,255,.18)}
+  .tool-ico.small{width:26px;height:26px}
+
+  .project{background:linear-gradient(180deg,#2f3133,#2b2d2f);border-right:1px solid var(--line);display:grid;grid-template-rows:38px 1fr;min-height:0}
+  .project-head{display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--line);color:var(--title);font-weight:700;font-size:14px}
+  .tree{padding:10px;overflow:auto;font-size:14px}
+  .node{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px}
+  .node.dim{color:var(--muted)}
+  .node.active{background:rgba(74,163,255,.14);outline:1px solid rgba(74,163,255,.18)}
+  .indent1{padding-left:22px}
+  .folder{width:14px;height:11px;border-radius:2px;background:linear-gradient(180deg,#caa35a,#b28a42)}
+  .file{width:12px;height:14px;border-radius:2px;background:linear-gradient(180deg,#6aa6ff,#3c78d8)}
+  .pyfile{width:12px;height:12px;border-radius:4px;background:linear-gradient(135deg,#ffd54a,#ff9f1a)}
+
+  .editor{background:var(--editor);min-height:0;position:relative}
+  .editor-inner{height:100%;display:grid;grid-template-columns:56px 1fr;min-height:0}
+  .gutter{background:var(--gutter);border-right:1px solid rgba(255,255,255,.06);color:#5f6b78;font-family:var(--mono);
+    font-size:13px;line-height:1.6;padding:10px 10px;user-select:none;white-space:pre;overflow:hidden}
+  .code{font-family:var(--mono);font-size:13px;line-height:1.6;padding:10px 12px;white-space:pre;overflow:auto;color:var(--text);
+    background:linear-gradient(180deg,#2b2b2b,#292a2b)}
+  .guide{position:absolute;top:0;bottom:0;left:calc(56px + 1px + 620px);width:1px;background:rgba(255,255,255,.05);pointer-events:none}
+
+  .right-tool{background:#2a2c2e;border-left:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:12px}
+  .right-ico{width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03)}
+  .right-ico.bell{position:relative}
+  .right-ico.bell:after{content:"";width:8px;height:8px;border-radius:50%;background:#ff4d4d;position:absolute;right:4px;top:4px;box-shadow:0 0 0 2px rgba(255,77,77,.15)}
+</style>
+</head>
+
+<body>
+<div class="toast" id="toast">Скопировано</div>
+
+<div class="window">
+
+  <div class="topbar">
+    <div class="pc-logo">PC</div>
+    <div class="hamb"></div>
+
+    <div class="chip">
+      <div class="avatar">FG</div>
+      <span>five_grade.py</span>
+    </div>
+
+    <div class="crumbs">
+      <span>Version control</span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="top-right">
+      <button class="copy-btn" id="copyBtn" title="Скопировать весь код">Copy</button>
+      <div class="drop">Current File <span style="opacity:.75">▾</span></div>
+      <div class="run" title="Run"></div>
+      <div class="icon-btn" title="Settings"></div>
+      <div class="icon-btn" title="Search"></div>
+      <div class="icon-btn" title="Options"></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active"><span class="py-dot"></span>2512.py</div>
+  </div>
+
+  <div class="content">
+
+    <aside class="left-tool">
+      <div class="tool-col">
+        <div class="tool-ico active"></div>
+        <div class="tool-ico"></div>
+        <div class="tool-ico"></div>
+        <div class="tool-ico"></div>
+        <div class="tool-ico"></div>
+        <div class="tool-ico"></div>
+      </div>
+      <div class="tool-col">
+        <div class="tool-ico small"></div>
+      </div>
+    </aside>
+
+    <aside class="project">
+      <div class="project-head">▾ Project</div>
+      <div class="tree">
+        <div class="node"><span>▾</span><span class="folder"></span><b>kvalikPM01</b> <span style="color:var(--muted);font-weight:500">C:\Users\admin\Desktop</span></div>
+        <div class="node indent1 dim"><span>▸</span><span class="folder"></span>.venv</div>
+
+        <div class="node indent1 active"><span class="file"></span>2512.py</div>
+        <div class="node indent1"><span class="pyfile"></span>five_grade.py</div>
+        <div class="node indent1"><span class="pyfile"></span>four_grade.py</div>
+        <div class="node indent1"><span class="pyfile"></span>four_short.py</div>
+        <div class="node indent1 dim"><span class="file"></span>квалик_новый.docx</div>
+
+        <div style="height:12px"></div>
+        <div class="node dim">▸ External Libraries</div>
+        <div class="node dim">▸ Scratches and Consoles</div>
+      </div>
+    </aside>
+
+    <main class="editor">
+      <div class="editor-inner">
+        <div class="gutter" id="gutter"></div>
+        <pre class="code" id="codeArea" spellcheck="false"></pre>
+      </div>
+      <div class="guide"></div>
+
+      <textarea id="codeSource" style="display:none;">
+"""
+
+CREATE DATABASE IF NOT EXISTS kvalik5;
+USE kvalik5;
+
+DROP VIEW IF EXISTS v_requests_full;
+DROP VIEW IF EXISTS v_report_clients_sum;
+DROP VIEW IF EXISTS v_revenue_by_day;
+DROP VIEW IF EXISTS v_staff_load_by_day;
+
+DROP TABLE IF EXISTS requests;
+DROP TABLE IF EXISTS schedule;
+DROP TABLE IF EXISTS staff;
+DROP TABLE IF EXISTS services;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  role ENUM('admin','client','manager') NOT NULL,
+  full_name VARCHAR(200) NOT NULL,
+  phone VARCHAR(30) NULL,
+  login VARCHAR(50) NOT NULL UNIQUE,
+  password VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE services(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1
+);
+
+CREATE TABLE staff(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(200) NOT NULL,
+  position VARCHAR(100) NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1
+);
+
+CREATE TABLE schedule(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  staff_id INT NOT NULL,
+  work_date DATE NOT NULL,
+  time_from TIME NOT NULL,
+  time_to TIME NOT NULL,
+  FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+CREATE TABLE requests(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  client_id INT NOT NULL,
+  service_id INT NOT NULL,
+  staff_id INT NULL,    
+  visit_date DATE NOT NULL,
+  time_from TIME NULL,
+  time_to TIME NULL,
+  status ENUM('new','active','done','canceled') NOT NULL DEFAULT 'new',
+  qty INT NOT NULL DEFAULT 1,
+  discount_percent INT NOT NULL DEFAULT 0,
+  comment VARCHAR(500) NULL,
+  FOREIGN KEY(client_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY(service_id) REFERENCES services(id),
+  FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+
+CREATE VIEW v_requests_full AS
+SELECT
+  r.id,
+  r.client_id,
+  u.full_name AS client_name,
+  r.service_id,
+  s.name AS service_name,
+  s.price AS service_price,
+  r.staff_id,
+  st.full_name AS staff_name,
+  st.position AS staff_position,
+  r.visit_date,
+  r.time_from,
+  r.time_to,
+  r.status,
+  r.qty,
+  r.discount_percent,
+  ROUND(r.qty * s.price * (1 - r.discount_percent/100), 2) AS total_sum,
+  CASE
+    WHEN r.time_from IS NULL OR r.time_to IS NULL THEN NULL
+    ELSE TIMESTAMPDIFF(MINUTE, CONCAT(r.visit_date,' ',r.time_from), CONCAT(r.visit_date,' ',r.time_to))
+  END AS duration_min,
+  COALESCE(r.comment,'') AS comment
+FROM requests r
+JOIN users u ON u.id=r.client_id
+JOIN services s ON s.id=r.service_id
+LEFT JOIN staff st ON st.id=r.staff_id;
+
+CREATE VIEW v_report_clients_sum AS
+SELECT
+  u.id AS client_id,
+  u.full_name AS client_name,
+  COUNT(r.id) AS cnt,
+  ROUND(COALESCE(SUM(r.qty * s.price * (1 - r.discount_percent/100)),0),2) AS total_sum
+FROM users u
+LEFT JOIN requests r ON r.client_id=u.id AND r.status<>'canceled'
+LEFT JOIN services s ON s.id=r.service_id
+WHERE u.role='client'
+GROUP BY u.id,u.full_name;
+
+CREATE VIEW v_revenue_by_day AS
+SELECT
+  r.visit_date,
+  ROUND(COALESCE(SUM(r.qty*s.price*(1-r.discount_percent/100)),0),2) AS revenue
+FROM requests r
+JOIN services s ON s.id=r.service_id
+WHERE r.status<>'canceled'
+GROUP BY r.visit_date
+ORDER BY r.visit_date DESC;
+
+CREATE VIEW v_staff_load_by_day AS
+SELECT
+  r.visit_date,
+  st.id AS staff_id,
+  st.full_name AS staff_name,
+  st.position AS staff_position,
+  SUM(COALESCE(TIMESTAMPDIFF(MINUTE, CONCAT(r.visit_date,' ',r.time_from), CONCAT(r.visit_date,' ',r.time_to)),0)) AS busy_minutes,
+  COUNT(r.id) AS requests_cnt
+FROM requests r
+JOIN staff st ON st.id=r.staff_id
+WHERE r.status<>'canceled'
+GROUP BY r.visit_date, st.id, st.full_name, st.position
+ORDER BY r.visit_date DESC, busy_minutes DESC;
+
+INSERT INTO users(role,full_name,phone,login,password) VALUES
+('admin','Админ Админов','000','admin','admin'),
+('manager','Менеджер Менеджеров','222','manager','manager'),
+('client','Клиент Клиентов','111','client','client');
+
+INSERT INTO services(name,price,is_active) VALUES
+('Услуга/Товар 1',100,1),
+('Услуга/Товар 2',250,1);
+
+INSERT INTO staff(full_name,position,is_active) VALUES
+('Иванов Иван','Специалист',1),
+('Петров Пётр','Специалист',1);
+
+INSERT INTO schedule(staff_id,work_date,time_from,time_to) VALUES
+(1,CURDATE(),'09:00','17:00'),
+(2,CURDATE(),'10:00','18:00');
+
+INSERT INTO requests(client_id,service_id,staff_id,visit_date,time_from,time_to,status,qty,discount_percent,comment) VALUES
+(3,1,1,CURDATE(),'10:00','10:30','new',2,0,'проба'),
+(3,2,2,CURDATE(),'12:00','12:45','active',1,10,'...');
+
+
+"""
+
+
+
+import sys, pymysql
+from PyQt6.QtCore import Qt, QDate
+from PyQt6.QtWidgets import *
+
+DB=dict(host="localhost",user="root",password="root",database="kvalik5",port=3306)
+
+def conn():
+    return pymysql.connect(**DB, cursorclass=pymysql.cursors.DictCursor, autocommit=False)
+
+def q1(sql, params=()):
+    c=conn()
+    try:
+        with c.cursor() as cur:
+            cur.execute(sql, params)
+            row=cur.fetchone()
+        c.commit()
+        return row
+    except:
+        c.rollback(); raise
+    finally:
+        c.close()
+
+def qa(sql, params=()):
+    c=conn()
+    try:
+        with c.cursor() as cur:
+            cur.execute(sql, params)
+            rows=cur.fetchall()
+        c.commit()
+        return rows
+    except:
+        c.rollback(); raise
+    finally:
+        c.close()
+
+def ex(sql, params=()):
+    c=conn()
+    try:
+        with c.cursor() as cur:
+            n=cur.execute(sql, params)
+        c.commit()
+        return n
+    except:
+        c.rollback(); raise
+    finally:
+        c.close()
+
+def msg(t,s): QMessageBox.information(None,t,s)
+def err(e): QMessageBox.critical(None,"Ошибка",str(e))
+
+def ask_yes(parent, text):
+    return QMessageBox.question(parent,"Подтверждение",text)==QMessageBox.StandardButton.Yes
+
+def sethdr(table, headers):
+    table.setColumnCount(len(headers))
+    table.setHorizontalHeaderLabels(headers)
+    table.horizontalHeader().setStretchLastSection(True)
+    table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+    table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+    table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+
+def fill(table, rows, keys):
+    table.setRowCount(0)
+    for i,row in enumerate(rows):
+        table.insertRow(i)
+        for j,key in enumerate(keys):
+            val="" if row.get(key) is None else str(row.get(key))
+            item=QTableWidgetItem(val)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            table.setItem(i,j,item)
+
+def sel_id(table):
+    r=table.currentRow()
+    if r<0: return None
+    try: return int(table.item(r,0).text())
+    except: return None
+
+class Auth(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.user=None
+        self.setWindowTitle("Вход")
+        self.setMinimumWidth(320)
+
+        layout=QVBoxLayout(self)
+        layout.addWidget(QLabel("Авторизация"))
+
+        self.login=QLineEdit(); self.login.setPlaceholderText("login"); self.login.setMinimumHeight(34)
+        self.password=QLineEdit(); self.password.setPlaceholderText("password")
+        self.password.setEchoMode(QLineEdit.EchoMode.Password); self.password.setMinimumHeight(34)
+
+        btn=QPushButton("Войти"); btn.setMinimumHeight(40)
+        layout.addWidget(self.login); layout.addWidget(self.password); layout.addWidget(btn)
+        btn.clicked.connect(self.go)
+
+    def go(self):
+        try:
+            u=q1("SELECT id,role,full_name FROM users WHERE login=%s AND password=%s",
+                 (self.login.text().strip(), self.password.text().strip()))
+        except Exception as e:
+            err(e); return
+        if not u:
+            msg("Ошибка","Неверный логин/пароль"); return
+        self.user=u
+        self.accept()
+
+class CrudDlg(QDialog):
+    def __init__(self, title, fields, load_fn, save_fn):
+        super().__init__()
+        self.setWindowTitle(title)
+        self.setMinimumWidth(540)
+        self.fields, self.load_fn, self.save_fn = fields, load_fn, save_fn
+        self.widgets={}
+
+        form=QFormLayout()
+        for label,col,tp,extra in fields:
+            if tp=="combo":
+                w=QComboBox(); w.addItems(extra)
+            elif tp=="int":
+                w=QSpinBox(); w.setRange(extra[0], extra[1])
+            elif tp=="float":
+                w=QDoubleSpinBox(); w.setRange(extra[0], extra[1]); w.setDecimals(2)
+            else:
+                w=QLineEdit()
+                if tp=="date": w.setText(QDate.currentDate().toString("yyyy-MM-dd"))
+                if tp=="time": w.setText("09:00")
+            w.setMinimumHeight(34)
+            self.widgets[col]=w
+            form.addRow(label, w)
+
+        ok=QPushButton("Сохранить"); ok.setMinimumHeight(40)
+        ca=QPushButton("Отмена"); ca.setMinimumHeight(40)
+        hb=QHBoxLayout(); hb.addWidget(ok); hb.addWidget(ca)
+
+        layout=QVBoxLayout(self)
+        layout.addLayout(form)
+        layout.addLayout(hb)
+
+        ok.clicked.connect(self.save)
+        ca.clicked.connect(self.reject)
+
+    def load(self, row_id):
+        data=self.load_fn(row_id)
+        if not data: return
+        for label,col,tp,extra in self.fields:
+            w=self.widgets[col]
+            v=data.get(col)
+            if tp=="combo":
+                if v in extra: w.setCurrentText(v)
+            elif tp=="int":
+                w.setValue(int(v or 0))
+            elif tp=="float":
+                w.setValue(float(v or 0))
+            else:
+                w.setText("" if v is None else str(v))
+
+    def save(self):
+        data={}
+        for label,col,tp,extra in self.fields:
+            w=self.widgets[col]
+            if tp=="combo": data[col]=w.currentText()
+            elif tp=="int": data[col]=int(w.value())
+            elif tp=="float": data[col]=float(w.value())
+            else: data[col]=w.text().strip()
+
+        try:
+            self.save_fn(data)
+        except Exception as e:
+            err(e); return
+        self.accept()
+
+class AppWin(QWidget):
+    def __init__(self, user):
+        super().__init__()
+        self.user=user
+        self.setWindowTitle(f"{user['role']} — {user['full_name']}")
+        self.setMinimumSize(1250,740)
+
+        self.mode=QComboBox()
+        self.mode.setMinimumHeight(34)
+
+        if user["role"]=="client":
+            self.mode.addItems(["Мои заявки"])
+            self.mode.setVisible(False)
+        elif user["role"]=="admin":
+            self.mode.addItems(["Заявки","Клиенты","Услуги","Сотрудники","Расписание"])
+        else:
+            self.mode.addItems(["Аналитика","Расписание"])
+
+        self.search=QLineEdit(); self.search.setMinimumHeight(34)
+        self.search.setPlaceholderText("Поиск")
+
+        self.filter_status=QComboBox()
+        self.filter_status.addItems(["all","new","active","done","canceled"])
+        self.filter_status.setMinimumHeight(34)
+
+        self.filter_date=QComboBox()
+        self.filter_date.addItems(["all","today"])
+        self.filter_date.setMinimumHeight(34)
+
+        self.btn_refresh=QPushButton("Обновить"); self.btn_refresh.setMinimumHeight(40)
+
+        top=QHBoxLayout()
+        if user["role"]!="client":
+            top.addWidget(QLabel("Режим:")); top.addWidget(self.mode)
+        top.addWidget(QLabel("Поиск:")); top.addWidget(self.search,2)
+        top.addWidget(QLabel("Статус:")); top.addWidget(self.filter_status)
+        top.addWidget(QLabel("Дата:")); top.addWidget(self.filter_date)
+        top.addWidget(self.btn_refresh)
+
+        self.table=QTableWidget()
+
+        self.btn_add=QPushButton("Добавить")
+        self.btn_edit=QPushButton("Редактировать")
+        self.btn_del=QPushButton("Удалить")
+        self.btn_cancel=QPushButton("Отменить")
+        self.btn_calc=QPushButton("Расчёт (выручка)")
+        self.btn_report=QPushButton("Отчёт: клиенты и суммы")
+
+        for b in [self.btn_add,self.btn_edit,self.btn_del,self.btn_cancel,self.btn_calc,self.btn_report]:
+            b.setMinimumHeight(46)
+
+        bottom=QHBoxLayout()
+        bottom.addWidget(self.btn_add)
+        bottom.addWidget(self.btn_edit)
+        bottom.addWidget(self.btn_del)
+        bottom.addSpacing(10)
+        bottom.addWidget(self.btn_cancel)
+        bottom.addSpacing(10)
+        bottom.addWidget(self.btn_calc)
+        bottom.addWidget(self.btn_report)
+
+        layout=QVBoxLayout(self)
+        layout.addLayout(top)
+        layout.addWidget(self.table,1)
+        layout.addLayout(bottom)
+
+        self.btn_refresh.clicked.connect(self.reload)
+        self.search.textChanged.connect(self.reload)
+        self.filter_status.currentTextChanged.connect(self.reload)
+        self.filter_date.currentTextChanged.connect(self.reload)
+        self.mode.currentTextChanged.connect(self.reload)
+
+        self.btn_add.clicked.connect(lambda: self.action("add"))
+        self.btn_edit.clicked.connect(lambda: self.action("edit"))
+        self.btn_del.clicked.connect(lambda: self.action("del"))
+        self.btn_cancel.clicked.connect(self.cancel_request)
+        self.btn_calc.clicked.connect(self.calc_revenue)
+        self.btn_report.clicked.connect(self.report_clients_sum)
+
+        self.reload()
+
+    def cur_mode(self):
+        if self.user["role"]=="client": return "Мои заявки"
+        return self.mode.currentText()
+
+    def where_requests(self):
+        s=self.search.text().strip()
+        st=self.filter_status.currentText()
+        dt=self.filter_date.currentText()
+
+        where=[]
+        params=[]
+
+        if self.user["role"]=="client":
+            where.append("client_id=%s")
+            params.append(self.user["id"])
+
+        if st!="all":
+            where.append("status=%s")
+            params.append(st)
+
+        if dt=="today":
+            where.append("visit_date=CURDATE()")
+
+        if s:
+            where.append("(client_name LIKE %s OR service_name LIKE %s OR staff_name LIKE %s OR comment LIKE %s)")
+            like=f"%{s}%"
+            params += [like,like,like,like]
+
+        where_sql=(" WHERE " + " AND ".join(where)) if where else ""
+        return where_sql, tuple(params)
+
+    def reload(self):
+        m=self.cur_mode()
+
+        self.filter_status.setEnabled(False)
+        self.filter_date.setEnabled(False)
+
+        self.btn_cancel.setVisible(False)
+        self.btn_calc.setVisible(False)
+        self.btn_report.setVisible(False)
+
+        if self.user["role"]=="client":
+            self.filter_status.setEnabled(True)
+            self.filter_date.setEnabled(True)
+            self.btn_cancel.setVisible(True)
+
+            self.search.setPlaceholderText("Поиск (услуга/комментарий)")
+            sethdr(self.table, ["ID","Дата","Время","Статус","Услуга","Кол-во","Цена","Скидка%","Итого","Сотрудник","Комментарий"])
+
+            where_sql, params = self.where_requests()
+            sql=f"""
+            SELECT id, visit_date,
+                   CONCAT(COALESCE(time_from,''),' - ',COALESCE(time_to,'')) AS t,
+                   status, service_name, qty, service_price, discount_percent, total_sum,
+                   COALESCE(staff_name,'') AS staff_name, comment
+            FROM v_requests_full
+            {where_sql}
+            ORDER BY id DESC
+            """
+            try: rows=qa(sql, params)
+            except Exception as e: err(e); return
+            fill(self.table, rows, ["id","visit_date","t","status","service_name","qty","service_price","discount_percent","total_sum","staff_name","comment"])
+            return
+
+        if self.user["role"]=="admin":
+            if m=="Заявки":
+                self.filter_status.setEnabled(True)
+                self.filter_date.setEnabled(True)
+                self.btn_cancel.setVisible(True)
+                self.btn_calc.setVisible(True)
+                self.btn_report.setVisible(True)
+
+                self.search.setPlaceholderText("Поиск (клиент/услуга/сотрудник/коммент)")
+                sethdr(self.table, ["ID","Клиент","Дата","Время","Статус","Услуга","Кол-во","Цена","Скидка%","Итого","Сотрудник","Комментарий"])
+
+                where_sql, params = self.where_requests()
+                sql=f"""
+                SELECT id, client_name, visit_date,
+                       CONCAT(COALESCE(time_from,''),' - ',COALESCE(time_to,'')) AS t,
+                       status, service_name, qty, service_price, discount_percent, total_sum,
+                       COALESCE(staff_name,'') AS staff_name, comment
+                FROM v_requests_full
+                {where_sql}
+                ORDER BY id DESC
+                """
+                try: rows=qa(sql, params)
+                except Exception as e: err(e); return
+                fill(self.table, rows, ["id","client_name","visit_date","t","status","service_name","qty","service_price","discount_percent","total_sum","staff_name","comment"])
+                return
+
+            if m=="Клиенты":
+                self.search.setPlaceholderText("Поиск (ФИО/телефон/login)")
+                sethdr(self.table, ["ID","ФИО","Телефон","Логин","Пароль"])
+                s=self.search.text().strip()
+                where=["role='client'"]
+                params=[]
+                if s:
+                    where.append("(full_name LIKE %s OR phone LIKE %s OR login LIKE %s)")
+                    like=f"%{s}%"; params += [like,like,like]
+                ws=" WHERE " + " AND ".join(where)
+                try: rows=qa("SELECT id,full_name,phone,login,password FROM users"+ws+" ORDER BY id DESC", tuple(params))
+                except Exception as e: err(e); return
+                fill(self.table, rows, ["id","full_name","phone","login","password"])
+                return
+
+            if m=="Услуги":
+                self.search.setPlaceholderText("Поиск (название)")
+                sethdr(self.table, ["ID","Название","Цена","Активна"])
+                s=self.search.text().strip()
+                if s:
+                    rows=qa("SELECT id,name,price,is_active FROM services WHERE name LIKE %s ORDER BY id DESC", (f"%{s}%",))
+                else:
+                    rows=qa("SELECT id,name,price,is_active FROM services ORDER BY id DESC")
+                fill(self.table, rows, ["id","name","price","is_active"])
+                return
+
+            if m=="Сотрудники":
+                self.search.setPlaceholderText("Поиск (ФИО/должность)")
+                sethdr(self.table, ["ID","ФИО","Должность","Активен"])
+                s=self.search.text().strip()
+                if s:
+                    rows=qa("SELECT id,full_name,position,is_active FROM staff WHERE full_name LIKE %s OR position LIKE %s ORDER BY id DESC",
+                            (f"%{s}%", f"%{s}%"))
+                else:
+                    rows=qa("SELECT id,full_name,position,is_active FROM staff ORDER BY id DESC")
+                fill(self.table, rows, ["id","full_name","position","is_active"])
+                return
+
+            if m=="Расписание":
+                self.search.setPlaceholderText("Поиск (сотрудник/должность)")
+                sethdr(self.table, ["ID","Сотрудник","Должность","Дата","С","По"])
+                s=self.search.text().strip()
+                if s:
+                    rows=qa("""
+                    SELECT sch.id, st.full_name, st.position, sch.work_date, sch.time_from, sch.time_to
+                    FROM schedule sch JOIN staff st ON st.id=sch.staff_id
+                    WHERE st.full_name LIKE %s OR st.position LIKE %s
+                    ORDER BY sch.work_date DESC, sch.time_from
+                    """,(f"%{s}%",f"%{s}%"))
+                else:
+                    rows=qa("""
+                    SELECT sch.id, st.full_name, st.position, sch.work_date, sch.time_from, sch.time_to
+                    FROM schedule sch JOIN staff st ON st.id=sch.staff_id
+                    ORDER BY sch.work_date DESC, sch.time_from
+                    """)
+                fill(self.table, rows, ["id","full_name","position","work_date","time_from","time_to"])
+                return
+
+        if self.user["role"]=="manager":
+            if m=="Аналитика":
+                self.btn_calc.setVisible(True)
+                self.btn_report.setVisible(True)
+
+                self.search.setPlaceholderText("Поиск (дата YYYY-MM-DD)")
+                sethdr(self.table, ["Дата","Выручка"])
+
+                try:
+                    kpi_clients=q1("SELECT COUNT(*) cnt FROM users WHERE role='client'")
+                    kpi_req=q1("SELECT COUNT(*) cnt FROM requests WHERE status<>'canceled'")
+                    kpi_avg=q1("""SELECT ROUND(AVG(duration_min),2) avg_min
+                                  FROM v_requests_full
+                                  WHERE status<>'canceled' AND duration_min IS NOT NULL""")
+                    kpi_rev=q1("SELECT ROUND(COALESCE(SUM(total_sum),0),2) total FROM v_requests_full WHERE status<>'canceled'")
+                    rows=qa("SELECT visit_date, revenue FROM v_revenue_by_day ORDER BY visit_date DESC")
+                except Exception as e:
+                    err(e); return
+
+                s=self.search.text().strip()
+                if s:
+                    rows=[r for r in rows if s in str(r.get("visit_date",""))]
+
+                fill(self.table, rows, ["visit_date","revenue"])
+
+                msg("Аналитика",
+                    "Клиентов: {0}\n"
+                    "Заявок: {1}\n"
+                    "Средняя длительность (мин): {2}\n"
+                    "Общая выручка: {3}".format(
+                        kpi_clients["cnt"],
+                        kpi_req["cnt"],
+                        kpi_avg["avg_min"] or 0,
+                        kpi_rev["total"] or 0
+                    ))
+                return
+
+            if m=="Расписание":
+                self.search.setPlaceholderText("Поиск (сотрудник/должность)")
+                sethdr(self.table, ["ID","Сотрудник","Должность","Дата","С","По"])
+                s=self.search.text().strip()
+                if s:
+                    rows=qa("""
+                    SELECT sch.id, st.full_name, st.position, sch.work_date, sch.time_from, sch.time_to
+                    FROM schedule sch JOIN staff st ON st.id=sch.staff_id
+                    WHERE st.full_name LIKE %s OR st.position LIKE %s
+                    ORDER BY sch.work_date DESC, sch.time_from
+                    """,(f"%{s}%",f"%{s}%"))
+                else:
+                    rows=qa("""
+                    SELECT sch.id, st.full_name, st.position, sch.work_date, sch.time_from, sch.time_to
+                    FROM schedule sch JOIN staff st ON st.id=sch.staff_id
+                    ORDER BY sch.work_date DESC, sch.time_from
+                    """)
+                fill(self.table, rows, ["id","full_name","position","work_date","time_from","time_to"])
+                return
+
+    def dlg_client(self, mode, uid=None):
+        def load_fn(id_):
+            return q1("SELECT id,full_name,phone,login,password FROM users WHERE id=%s AND role='client'", (id_,))
+        def save_fn(d):
+            fio=d["full_name"]; login=d["login"]; pw=d["password"]; phone=d["phone"] or None
+            if not fio or not login or not pw:
+                msg("Ошибка","ФИО, login и password обязательны"); return
+            if mode=="add":
+                ex("INSERT INTO users(role,full_name,phone,login,password) VALUES('client',%s,%s,%s,%s)",
+                   (fio,phone,login,pw))
+            else:
+                ex("UPDATE users SET full_name=%s,phone=%s,login=%s,password=%s WHERE id=%s AND role='client'",
+                   (fio,phone,login,pw,uid))
+        fields=[("ФИО","full_name","text",None),
+                ("Телефон","phone","text",None),
+                ("Логин","login","text",None),
+                ("Пароль","password","text",None)]
+        dlg=CrudDlg("Клиент",fields,load_fn,save_fn)
+        if mode=="edit": dlg.load(uid)
+        return dlg
+
+    def dlg_service(self, mode, sid=None):
+        def load_fn(id_):
+            return q1("SELECT id,name,price,is_active FROM services WHERE id=%s", (id_,))
+        def save_fn(d):
+            name=d["name"]; price=d["price"]; active=d["is_active"]
+            if not name:
+                msg("Ошибка","Название обязательно"); return
+            if mode=="add":
+                ex("INSERT INTO services(name,price,is_active) VALUES(%s,%s,%s)", (name,price,active))
+            else:
+                ex("UPDATE services SET name=%s,price=%s,is_active=%s WHERE id=%s", (name,price,active,sid))
+        fields=[("Название","name","text",None),
+                ("Цена","price","float",(0,99999999)),
+                ("Активна (0/1)","is_active","int",(0,1))]
+        dlg=CrudDlg("Услуга/Товар",fields,load_fn,save_fn)
+        if mode=="edit": dlg.load(sid)
+        return dlg
+
+    def dlg_staff(self, mode, stid=None):
+        def load_fn(id_):
+            return q1("SELECT id,full_name,position,is_active FROM staff WHERE id=%s", (id_,))
+        def save_fn(d):
+            fio=d["full_name"]; pos=d["position"]; active=d["is_active"]
+            if not fio or not pos:
+                msg("Ошибка","ФИО и должность обязательны"); return
+            if mode=="add":
+                ex("INSERT INTO staff(full_name,position,is_active) VALUES(%s,%s,%s)", (fio,pos,active))
+            else:
+                ex("UPDATE staff SET full_name=%s,position=%s,is_active=%s WHERE id=%s", (fio,pos,active,stid))
+        fields=[("ФИО","full_name","text",None),
+                ("Должность","position","text",None),
+                ("Активен (0/1)","is_active","int",(0,1))]
+        dlg=CrudDlg("Сотрудник",fields,load_fn,save_fn)
+        if mode=="edit": dlg.load(stid)
+        return dlg
+
+    def dlg_schedule(self, mode, schid=None):
+        staff=qa("SELECT id,full_name,position FROM staff WHERE is_active=1 ORDER BY full_name")
+        staff_items=[f"{x['id']} — {x['full_name']} ({x['position']})" for x in staff]
+
+        def load_fn(id_):
+            return q1("SELECT id,staff_id,work_date,time_from,time_to FROM schedule WHERE id=%s", (id_,))
+
+        def save_fn(d):
+            staff_id=int(d["staff_id"].split("—")[0].strip())
+            wd=d["work_date"]; tf=d["time_from"]; tt=d["time_to"]
+            if not wd or not tf or not tt:
+                msg("Ошибка","Дата/время обязательны"); return
+            if mode=="add":
+                ex("INSERT INTO schedule(staff_id,work_date,time_from,time_to) VALUES(%s,%s,%s,%s)",
+                   (staff_id,wd,tf,tt))
+            else:
+                ex("UPDATE schedule SET staff_id=%s,work_date=%s,time_from=%s,time_to=%s WHERE id=%s",
+                   (staff_id,wd,tf,tt,schid))
+
+        fields=[("Сотрудник","staff_id","combo",staff_items),
+                ("Дата","work_date","date",None),
+                ("С (HH:MM)","time_from","time",None),
+                ("По (HH:MM)","time_to","time",None)]
+        dlg=CrudDlg("Расписание",fields,load_fn,save_fn)
+        if mode=="edit": dlg.load(schid)
+        return dlg
+
+    def dlg_request(self, mode, rid=None):
+        clients=qa("SELECT id,full_name FROM users WHERE role='client' ORDER BY full_name")
+        client_items=[f"{x['id']} — {x['full_name']}" for x in clients]
+
+        services=qa("SELECT id,name,price FROM services WHERE is_active=1 ORDER BY name")
+        service_items=[f"{x['id']} — {x['name']} ({x['price']})" for x in services]
+
+        staff=qa("SELECT id,full_name,position FROM staff WHERE is_active=1 ORDER BY full_name")
+        staff_items=["(нет)"] + [f"{x['id']} — {x['full_name']} ({x['position']})" for x in staff]
+
+        def load_fn(id_):
+            return q1("SELECT * FROM requests WHERE id=%s", (id_,))
+
+        def save_fn(d):
+            if self.user["role"]=="client":
+                client_id=self.user["id"]
+                status="new"
+                discount=0
+                staff_id=None
+            else:
+                client_id=int(d["client_id"].split("—")[0].strip())
+                status=d["status"]
+                discount=int(d["discount_percent"])
+                if d["staff_id"]=="(нет)":
+                    staff_id=None
+                else:
+                    staff_id=int(d["staff_id"].split("—")[0].strip())
+
+            service_id=int(d["service_id"].split("—")[0].strip())
+            visit_date=d["visit_date"]
+            time_from=d["time_from"] or None
+            time_to=d["time_to"] or None
+            qty=int(d["qty"])
+            comment=d["comment"] or None
+
+            if mode=="add":
+                ex("""INSERT INTO requests(client_id,service_id,staff_id,visit_date,time_from,time_to,status,qty,discount_percent,comment)
+                      VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                   (client_id,service_id,staff_id,visit_date,time_from,time_to,status,qty,discount,comment))
+            else:
+                if self.user["role"]=="client":
+                    msg("Ошибка","Клиент не может редактировать заявки"); return
+                ex("""UPDATE requests
+                      SET client_id=%s,service_id=%s,staff_id=%s,visit_date=%s,time_from=%s,time_to=%s,
+                          status=%s,qty=%s,discount_percent=%s,comment=%s
+                      WHERE id=%s""",
+                   (client_id,service_id,staff_id,visit_date,time_from,time_to,status,qty,discount,comment,rid))
+
+        fields=[]
+        if self.user["role"]!="client":
+            fields.append(("Клиент","client_id","combo",client_items))
+
+        fields += [
+            ("Дата","visit_date","date",None),
+            ("Время С (HH:MM)","time_from","time",None),
+            ("Время По (HH:MM)","time_to","time",None),
+            ("Услуга/Товар","service_id","combo",service_items),
+        ]
+
+        if self.user["role"]!="client":
+            fields.append(("Сотрудник","staff_id","combo",staff_items))
+            fields.append(("Статус","status","combo",["new","active","done","canceled"]))
+            fields.append(("Скидка%","discount_percent","int",(0,100)))
+
+        fields += [
+            ("Кол-во","qty","int",(1,100000)),
+            ("Комментарий","comment","text",None),
+        ]
+
+        dlg=CrudDlg("Заявка", fields, load_fn, save_fn)
+        if mode=="edit": dlg.load(rid)
+        return dlg
+
+    def action(self, act):
+        m=self.cur_mode()
+
+        if self.user["role"]=="client":
+            if act=="add":
+                dlg=self.dlg_request("add")
+                if dlg.exec(): self.reload()
+                return
+            msg("Внимание","Клиенту доступны только добавление и отмена"); return
+
+        if self.user["role"]=="manager":
+            if m=="Аналитика":
+                msg("Внимание","Аналитика — только просмотр"); return
+            if act in ("edit","del"):
+                sid=sel_id(self.table)
+                if not sid: msg("Внимание","Выберите запись"); return
+            if act=="del" and not ask_yes(self, f"Удалить расписание ID={sid}?"): return
+
+            if act=="add": dlg=self.dlg_schedule("add")
+            elif act=="edit": dlg=self.dlg_schedule("edit", sid)
+            else:
+                try: ex("DELETE FROM schedule WHERE id=%s", (sid,))
+                except Exception as e: err(e); return
+                self.reload(); return
+
+            if dlg.exec(): self.reload()
+            return
+
+        if act in ("edit","del"):
+            rid=sel_id(self.table)
+            if not rid: msg("Внимание","Выберите запись"); return
+            if act=="del" and not ask_yes(self, f"Удалить ID={rid}?"): return
+
+        if m=="Заявки":
+            if act=="add": dlg=self.dlg_request("add")
+            elif act=="edit": dlg=self.dlg_request("edit", rid)
+            else:
+                try: ex("DELETE FROM requests WHERE id=%s", (rid,))
+                except Exception as e: err(e); return
+                self.reload(); return
+            if dlg.exec(): self.reload()
+            return
+
+        if m=="Клиенты":
+            if act=="add": dlg=self.dlg_client("add")
+            elif act=="edit": dlg=self.dlg_client("edit", rid)
+            else:
+                try: ex("DELETE FROM users WHERE id=%s AND role='client'", (rid,))
+                except Exception as e: err(e); return
+                self.reload(); return
+            if dlg.exec(): self.reload()
+            return
+
+        if m=="Услуги":
+            if act=="add": dlg=self.dlg_service("add")
+            elif act=="edit": dlg=self.dlg_service("edit", rid)
+            else:
+                try: ex("DELETE FROM services WHERE id=%s", (rid,))
+                except Exception as e: err(e); return
+                self.reload(); return
+            if dlg.exec(): self.reload()
+            return
+
+        if m=="Сотрудники":
+            if act=="add": dlg=self.dlg_staff("add")
+            elif act=="edit": dlg=self.dlg_staff("edit", rid)
+            else:
+                try: ex("DELETE FROM staff WHERE id=%s", (rid,))
+                except Exception as e: err(e); return
+                self.reload(); return
+            if dlg.exec(): self.reload()
+            return
+
+        if m=="Расписание":
+            if act=="add": dlg=self.dlg_schedule("add")
+            elif act=="edit": dlg=self.dlg_schedule("edit", rid)
+            else:
+                try: ex("DELETE FROM schedule WHERE id=%s", (rid,))
+                except Exception as e: err(e); return
+                self.reload(); return
+            if dlg.exec(): self.reload()
+            return
+
+    def cancel_request(self):
+        if self.cur_mode() not in ("Мои заявки","Заявки"):
+            msg("Внимание","Отмена доступна только для заявок"); return
+
+        rid=sel_id(self.table)
+        if not rid: msg("Внимание","Выберите запись"); return
+        if not ask_yes(self, f"Отменить ID={rid}?"): return
+
+        try:
+            if self.user["role"]=="client":
+                ex("UPDATE requests SET status='canceled' WHERE id=%s AND client_id=%s", (rid, self.user["id"]))
+            else:
+                ex("UPDATE requests SET status='canceled' WHERE id=%s", (rid,))
+        except Exception as e:
+            err(e); return
+
+        self.reload()
+
+    def calc_revenue(self):
+        if self.user["role"]=="client":
+            msg("Внимание","Расчёты доступны админу/менеджеру"); return
+
+        if self.cur_mode()=="Заявки":
+            where_sql, params = self.where_requests()
+            if self.filter_status.currentText()=="all":
+                if where_sql:
+                    where_sql += " AND status<>'canceled'"
+                else:
+                    where_sql = " WHERE status<>'canceled'"
+            sql=f"SELECT ROUND(COALESCE(SUM(total_sum),0),2) total FROM v_requests_full {where_sql}"
+            try: row=q1(sql, params)
+            except Exception as e: err(e); return
+            msg("Расчёт", f"Выручка: {row['total'] or 0}")
+            return
+
+        try:
+            row=q1("SELECT ROUND(COALESCE(SUM(total_sum),0),2) total FROM v_requests_full WHERE status<>'canceled'")
+        except Exception as e:
+            err(e); return
+        msg("Расчёт", f"Выручка: {row['total'] or 0}")
+
+    def report_clients_sum(self):
+        if self.user["role"]=="client":
+            msg("Внимание","Отчёты доступны админу/менеджеру")
+            return
+
+        if self.user["role"]=="manager":
+            try:
+                rows=qa("""
+                    SELECT visit_date, staff_name, staff_position, busy_minutes, requests_cnt
+                    FROM v_staff_load_by_day
+                    ORDER BY visit_date DESC, busy_minutes DESC
+                    LIMIT 200
+                """)
+            except Exception as e:
+                err(e); return
+
+            lines=["Загруженность сотрудников:"]
+            for r in rows:
+                lines.append(
+                    f"- {r['visit_date']} | {r['staff_name']} ({r['staff_position']}): "
+                    f"занято {r['busy_minutes']} мин, заявок={r['requests_cnt']}"
+                )
+            msg("Отчёт", "\n".join(lines))
+            return
+
+        try:
+            rows=qa("SELECT client_name,cnt,total_sum FROM v_report_clients_sum ORDER BY total_sum DESC")
+        except Exception as e:
+            err(e); return
+        lines=["Клиенты и суммы:"]
+        for r in rows:
+            lines.append(f"- {r['client_name']}: заявок={r['cnt']}, сумма={r['total_sum']}")
+        msg("Отчёт","\n".join(lines))
+
+def main():
+    app=QApplication(sys.argv)
+    try:
+        q1("SELECT 1")
+    except Exception as e:
+        err(e); return
+
+    a=Auth()
+    if a.exec()!=a.DialogCode.Accepted:
+        return
+
+    w=AppWin(a.user)
+    w.show()
+    sys.exit(app.exec())
+
+if __name__=="__main__":
+    main()
+
+      </textarea>
+    </main>
+
+    <aside class="right-tool">
+      <div class="right-ico bell"></div>
+      <div class="right-ico"></div>
+      <div class="right-ico"></div>
+      <div style="flex:1"></div>
+      <div class="right-ico"></div>
+    </aside>
+
+  </div>
+</div>
+
+<script>
+  function buildGutter(text){
+    const lines = (text.split("\n").length || 1);
+    let out = "";
+    for(let i=1;i<=lines;i++) out += String(i) + "\n";
+    document.getElementById("gutter").textContent = out;
+  }
+
+  const raw = document.getElementById("codeSource").value.replace(/\r\n/g,"\n").trimEnd();
+  document.getElementById("codeArea").textContent = raw;
+  buildGutter(raw);
+
+  function showToast(text){
+    const t = document.getElementById("toast");
+    t.textContent = text;
+    t.classList.add("show");
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(()=>t.classList.remove("show"), 900);
+  }
+
+  async function copyAll(){
+    const text = document.getElementById("codeSource").value.replace(/\r\n/g,"\n").trimEnd();
+    try{
+      await navigator.clipboard.writeText(text);
+      showToast("Скопировано");
+    }catch(e){
+      // запасной способ
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try{ document.execCommand("copy"); showToast("Скопировано"); }
+      catch(_){ showToast("Не удалось скопировать"); }
+      document.body.removeChild(ta);
+    }
+  }
+
+  document.getElementById("copyBtn").addEventListener("click", copyAll);
+  document.addEventListener("keydown", (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase()==="c"){
+      e.preventDefault(); copyAll();
+    }
+  });
+</script>
+</body>
+</html>
